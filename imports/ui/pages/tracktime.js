@@ -17,7 +17,7 @@ import { getHolidays, checkHoliday } from '../../utils/holiday.js'
 
 import './tracktime.html'
 import '../components/projectsearch.js'
-import '../components/tasksearch.js'
+import '../components/tasksearch2.js'
 import '../components/timetracker.js'
 import '../components/weektable.js'
 import '../components/calendar.js'
@@ -165,15 +165,16 @@ Template.tracktime.events({
       showToast(t('notifications.enter_time'))
       return
     }
-    try {
-      hours = hours.replace(',', '.')
-      templateInstance.math.eval(hours)
-    } catch (exception) {
+    hours = hours.replace(',', '.')
+    hours = parseFloat(hours)
+    if (isNaN(hours)) {
       showToast(t('notifications.check_time_input'))
       return
     }
     const projectId = templateInstance.projectId.get()
-    const task = templateInstance.$('.js-tasksearch-input').val()
+    const taskId = templateInstance.$('.js-tasksearch-input').val()
+    const task = templateInstance.$('.js-tasksearch-input').find(":selected").text().trim()
+
     const localDate = dayjs(templateInstance.$('.js-date').val()).toDate()
     let date = dayjs.utc(templateInstance.$('.js-date').val(), getGlobalSetting('dateformatVerbose')).isValid()
       ? dayjs.utc(templateInstance.$('.js-date').val(), getGlobalSetting('dateformatVerbose')).toDate()
@@ -186,7 +187,6 @@ Template.tracktime.events({
         return
       }
     }
-    hours = templateInstance.math.eval(hours)
 
     if (getUserSetting('timeunit') === 'd') {
       hours *= getUserSetting('hoursToDays')
@@ -198,7 +198,7 @@ Template.tracktime.events({
     templateInstance.$('.js-save').prop('disabled', true)
     if (templateInstance.tcid.get()) {
       Meteor.call('updateTimeCard', {
-        _id: templateInstance.tcid.get(), projectId, date, hours, task, customfields,
+        _id: templateInstance.tcid.get(), projectId, date, hours, task, taskId, customfields,
       }, (error) => {
         if (error) {
           console.error(error)
@@ -224,7 +224,7 @@ Template.tracktime.events({
       })
     } else {
       Meteor.call('insertTimeCard', {
-        projectId, date, hours, task, customfields,
+        projectId, date, hours, task, taskId, customfields,
       }, (error) => {
         if (error) {
           console.error(error)

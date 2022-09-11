@@ -5,6 +5,7 @@ import { check, Match } from 'meteor/check'
 import { Promise } from 'meteor/promise'
 import Timecards from './timecards.js'
 import Tasks from '../tasks/tasks.js'
+import { Cards, CustomFields } from '../integration/server/wekan.js'
 import Projects from '../projects/projects.js'
 import { t } from '../../utils/i18n.js'
 import { emojify, getGlobalSetting } from '../../utils/frontend_helpers'
@@ -45,27 +46,27 @@ function checkTimeEntryRule({
     throw new Meteor.Error(error.message)
   }
 }
-function insertTimeCard(projectId, task, date, hours, userId, customfields) {
+
+function insertTimeCard(projectId, task, taskId, date, hours, userId, customfields) {
+  const customer = determineCustomer(taskId)
+
   const newTimeCard = {
     userId,
     projectId,
     date,
     hours,
     task: task.replace(/(:\S*:)/g, emojify),
+    cardId: taskId,
+    customer: customer,
     ...customfields,
   }
-  if (!Tasks.findOne({ userId, name: task.replace(/(:\S*:)/g, emojify) })) {
-    Tasks.insert({
-      userId, lastUsed: new Date(), name: task.replace(/(:\S*:)/g, emojify), ...customfields,
-    })
-  } else {
-    Tasks.update({ userId, name: task.replace(/(:\S*:)/g, emojify) }, { $set: { lastUsed: new Date(), ...customfields } })
-  }
+
   return Timecards.insert(newTimeCard)
 }
-function upsertTimecard(projectId, task, date, hours, userId) {
+
+function upsertTimecard(projectId, task, taskId, date, hours, userId) {
   if (!Tasks.findOne({ userId, name: task.replace(/(:\S*:)/g, emojify) })) {
-    Tasks.insert({ userId, lastUsed: new Date(), name: task.replace(/(:\S*:)/g, emojify) })
+    Tasks.insert({ userId, lastUsed: new Date(), name: task.replace(/(:\S*:)/g, emojify), taskId: taskId })
   } else {
     Tasks.update({ userId, name: task.replace(/(:\S*:)/g, emojify) }, { $set: { lastUsed: new Date() } })
   }
@@ -91,6 +92,7 @@ function upsertTimecard(projectId, task, date, hours, userId) {
       task: task.replace(/(:\S*:)/g, emojify),
     })
   }
+  const customer = determineCustomer(taskId)
   return Timecards.update(
     {
       userId,
@@ -104,6 +106,8 @@ function upsertTimecard(projectId, task, date, hours, userId) {
       date,
       hours,
       task: task.replace(/(:\S*:)/g, emojify),
+      cardId: taskId,
+      customer: customer,
     },
 
     { upsert: true },
@@ -114,12 +118,14 @@ Meteor.methods({
   insertTimeCard({
     projectId,
     task,
+    taskId,
     date,
     hours,
     customfields,
   }) {
     check(projectId, String)
     check(task, String)
+    check(taskId, Match.Maybe(String))
     check(date, Date)
     check(hours, Number)
     check(customfields, Match.Maybe(Object))
@@ -127,7 +133,7 @@ Meteor.methods({
     checkTimeEntryRule({
       userId: this.userId, projectId, task, state: 'new', date, hours,
     })
-    insertTimeCard(projectId, task, date, hours, this.userId, customfields)
+    insertTimeCard(projectId, task, taskId, date, hours, this.userId, customfields)
   },
   upsertWeek(weekArray) {
     checkAuthentication(this)
@@ -135,6 +141,7 @@ Meteor.methods({
     weekArray.forEach((element) => {
       check(element.projectId, String)
       check(element.task, String)
+      check(element.taskId, String)
       check(element.date, Date)
       check(element.hours, Number)
       checkTimeEntryRule({
@@ -145,13 +152,14 @@ Meteor.methods({
         date: element.date,
         hours: element.hours,
       })
-      upsertTimecard(element.projectId, element.task, element.date, element.hours, this.userId)
+      upsertTimecard(element.projectId, element.task, element.taskId, element.date, element.hours, this.userId)
     })
   },
   updateTimeCard({
     projectId,
     _id,
     task,
+    taskId,
     date,
     hours,
     customfields,
@@ -159,6 +167,7 @@ Meteor.methods({
     check(projectId, String)
     check(_id, String)
     check(task, String)
+    check(taskId, Match.Maybe(String))
     check(date, Date)
     check(hours, Number)
     check(customfields, Match.Maybe(Object))
@@ -167,14 +176,15 @@ Meteor.methods({
     checkTimeEntryRule({
       userId: this.userId, projectId, task, state: timecard.state, date, hours,
     })
-    if (!Tasks.findOne({ userId: this.userId, name: task.replace(/(:\S*:)/g, emojify) })) {
-      Tasks.insert({ userId: this.userId, name: task.replace(/(:\S*:)/g, emojify), ...customfields })
-    }
+
+    const customer = determineCustomer(taskId)
     Timecards.update({ _id }, {
       $set: {
         projectId,
         date,
         hours,
+        cardId: taskId,
+        customer: customer,
         task: task.replace(/(:\S*:)/g, emojify),
         ...customfields,
       },
@@ -419,5 +429,28 @@ Meteor.methods({
     }
   },
 })
+
+// figure out task client by query custom field on wekan cards
+// if card has its own client, then use it directly
+// if card links to parent card, then use parent card's client
+// otherwise let the client blank
+function determineCustomer(cardId) {
+  let card = null
+  while(cardId) {
+    card = Cards.findOne({_id: cardId})
+    cardId = card?.parentId
+  }
+  if (card?.customFields) {
+    const reqCf = CustomFields.findOne({name: '需求方', type: "dropdown"})
+    if (reqCf) {
+      const theCf = card.customFields.find(cf => cf._id === reqCf._id)
+      if (theCf && reqCf.settings?.dropdownItems) {
+        theV = reqCf.settings?.dropdownItems.find(v => v._id === theCf.value)
+        return theV?.name
+      }
+    }
+  }
+  return null
+}
 
 export { insertTimeCard }
