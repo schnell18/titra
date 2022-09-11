@@ -2,21 +2,21 @@ import { check } from 'meteor/check'
 import { checkAuthentication } from '../../../utils/server_method_helpers.js'
 import Tasks from '../tasks.js'
 
-Meteor.publish('mytasks', function mytasks({ filter, projectId }) {
-  check(filter, Match.Optional(String))
-  check(projectId, Match.Optional(String))
-  checkAuthentication(this)
-  const taskFilter = {
-    $or: [{ userId: this.userId }],
-  }
-  if (projectId) {
-    taskFilter.$or.push({ projectId })
-  }
-  if (filter) {
-    taskFilter.name = { $regex: `.*${filter.replace(/[-[\]{}()*+?.,\\/^$|#\s]/g, '\\$&')}.*`, $options: 'i' }
-  }
-  return Tasks.find(taskFilter, { sort: { projectId: -1, lastUsed: -1 }, limit: 10 })
-})
+// Meteor.publish('mytasks', function mytasks({ filter, projectId }) {
+//   check(filter, Match.Optional(String))
+//   check(projectId, Match.Optional(String))
+//   checkAuthentication(this)
+//   const taskFilter = {
+//     $or: [{ userId: this.userId }],
+//   }
+//   if (projectId) {
+//     taskFilter.$or.push({ projectId })
+//   }
+//   if (filter) {
+//     taskFilter.name = { $regex: `.*${filter.replace(/[-[\]{}()*+?.,\\/^$|#\s]/g, '\\$&')}.*`, $options: 'i' }
+//   }
+//   return Tasks.find(taskFilter, { sort: { projectId: -1, lastUsed: -1 }, limit: 10 })
+// })
 
 Meteor.publish('allmytasks', function mytasks({ filter, limit }) {
   check(filter, Match.Maybe(String))
