@@ -47,7 +47,7 @@ function detailedDataTableMapper(entry) {
     }
   }
   if (getGlobalSetting('showCustomerInDetails')) {
-    mapping.push(project ? project.customer : '')
+    mapping.push(entry.customer ? entry.customer : project.customer)
   }
   if (getGlobalSetting('useState')) {
     mapping.push(entry.state)

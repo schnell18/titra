@@ -1,0 +1,18 @@
+<template name="tasksearch2">
+  {{#if isComponent}}
+    <input type="text" aria-label='{{t "tracktime.task_placeholder"}}' value="{{task}}" class="js-tasksearch-input form-control" autocomplete="off" placeholder='{{t "tracktime.task_placeholder"}}'/>
+  {{else}}
+
+    <div class="form-floating">
+      <select class="form-select form-control js-tasksearch-input" id="task">
+      {{#each tasks}}
+        <option value="{{value}}">
+        {{#if wekan}}<img src="{{ prefix }}/img/wekan.png" alt="Wekan"/>{{/if}}
+        {{emojify (label)}}
+        </option>
+      {{/each}}
+      </select>
+      <label class="form-label" for="task"><strong>{{t "globals.task"}}</strong></label>
+    </div>
+  {{/if}}
+</template>
