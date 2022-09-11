@@ -55,7 +55,7 @@
                 {{#unless isSandstorm}}
                 <div class="row">
                     <div class="col-6 col-md-3 me-auto d-grid">
-                    <a class="btn btn-secondary border" href="/changePwd">{{t "login.change_password"}}</a>
+                    <a class="btn btn-secondary border" href="{{ prefix }}/changePwd">{{t "login.change_password"}}</a>
                     </div>
                     <div class="col-6 col-md-3 d-grid">
                     <a class="btn btn-secondary border js-logout" href="#">{{t "navigation.logout"}}</a>
@@ -66,7 +66,7 @@
                 <div class="alert alert-secondary" role="alert">
                     {{t "login.anonymous_account_warning"}}
                 </div>
-                <a class="btn btn-primary border" href="/join">{{t "login.permanent_account"}}</a>
+                <a class="btn btn-primary border" href="{{ prefix }}/join">{{t "login.permanent_account"}}</a>
                 {{/if}}
             </div>
         </div>
