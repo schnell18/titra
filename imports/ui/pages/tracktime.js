@@ -173,6 +173,7 @@ Template.tracktime.events({
       return
     }
     const projectId = templateInstance.projectId.get()
+    const taskId = templateInstance.taskId
     const task = templateInstance.$('.js-tasksearch-input').val()
     const localDate = dayjs(templateInstance.$('.js-date').val()).toDate()
     let date = dayjs.utc(templateInstance.$('.js-date').val(), getGlobalSetting('dateformatVerbose')).isValid()
@@ -198,7 +199,7 @@ Template.tracktime.events({
     templateInstance.$('.js-save').prop('disabled', true)
     if (templateInstance.tcid.get()) {
       Meteor.call('updateTimeCard', {
-        _id: templateInstance.tcid.get(), projectId, date, hours, task, customfields,
+        _id: templateInstance.tcid.get(), projectId, date, hours, task, taskId, customfields,
       }, (error) => {
         if (error) {
           console.error(error)
@@ -224,7 +225,7 @@ Template.tracktime.events({
       })
     } else {
       Meteor.call('insertTimeCard', {
-        projectId, date, hours, task, customfields,
+        projectId, date, hours, task, taskId, customfields,
       }, (error) => {
         if (error) {
           console.error(error)

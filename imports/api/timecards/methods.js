@@ -45,27 +45,28 @@ function checkTimeEntryRule({
     throw new Meteor.Error(error.message)
   }
 }
-function insertTimeCard(projectId, task, date, hours, userId, customfields) {
+function insertTimeCard(projectId, task, taskId, date, hours, userId, customfields) {
   const newTimeCard = {
     userId,
     projectId,
     date,
     hours,
     task: task.replace(/(:\S*:)/g, emojify),
+    taskId: taskId,
     ...customfields,
   }
   if (!Tasks.findOne({ userId, name: task.replace(/(:\S*:)/g, emojify) })) {
     Tasks.insert({
-      userId, lastUsed: new Date(), name: task.replace(/(:\S*:)/g, emojify), ...customfields,
+      userId, lastUsed: new Date(), name: task.replace(/(:\S*:)/g, emojify), taskId: taskId, ...customfields,
     })
   } else {
     Tasks.update({ userId, name: task.replace(/(:\S*:)/g, emojify) }, { $set: { lastUsed: new Date(), ...customfields } })
   }
   return Timecards.insert(newTimeCard)
 }
-function upsertTimecard(projectId, task, date, hours, userId) {
+function upsertTimecard(projectId, task, taskId, date, hours, userId) {
   if (!Tasks.findOne({ userId, name: task.replace(/(:\S*:)/g, emojify) })) {
-    Tasks.insert({ userId, lastUsed: new Date(), name: task.replace(/(:\S*:)/g, emojify) })
+    Tasks.insert({ userId, lastUsed: new Date(), name: task.replace(/(:\S*:)/g, emojify), taskId: taskId })
   } else {
     Tasks.update({ userId, name: task.replace(/(:\S*:)/g, emojify) }, { $set: { lastUsed: new Date() } })
   }
@@ -104,6 +105,7 @@ function upsertTimecard(projectId, task, date, hours, userId) {
       date,
       hours,
       task: task.replace(/(:\S*:)/g, emojify),
+      taskId: taskId,
     },
 
     { upsert: true },
@@ -114,12 +116,14 @@ Meteor.methods({
   insertTimeCard({
     projectId,
     task,
+    taskId,
     date,
     hours,
     customfields,
   }) {
     check(projectId, String)
     check(task, String)
+    check(taskId, String)
     check(date, Date)
     check(hours, Number)
     check(customfields, Match.Maybe(Object))
@@ -127,7 +131,7 @@ Meteor.methods({
     checkTimeEntryRule({
       userId: this.userId, projectId, task, state: 'new', date, hours,
     })
-    insertTimeCard(projectId, task, date, hours, this.userId, customfields)
+    insertTimeCard(projectId, task, taskId, date, hours, this.userId, customfields)
   },
   upsertWeek(weekArray) {
     checkAuthentication(this)
@@ -135,6 +139,7 @@ Meteor.methods({
     weekArray.forEach((element) => {
       check(element.projectId, String)
       check(element.task, String)
+      check(element.taskId, String)
       check(element.date, Date)
       check(element.hours, Number)
       checkTimeEntryRule({
@@ -145,13 +150,14 @@ Meteor.methods({
         date: element.date,
         hours: element.hours,
       })
-      upsertTimecard(element.projectId, element.task, element.date, element.hours, this.userId)
+      upsertTimecard(element.projectId, element.task, element.taskId, element.date, element.hours, this.userId)
     })
   },
   updateTimeCard({
     projectId,
     _id,
     task,
+    taskId,
     date,
     hours,
     customfields,
@@ -159,6 +165,7 @@ Meteor.methods({
     check(projectId, String)
     check(_id, String)
     check(task, String)
+    check(taskId, String)
     check(date, Date)
     check(hours, Number)
     check(customfields, Match.Maybe(Object))
