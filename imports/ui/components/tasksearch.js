@@ -20,7 +20,6 @@ Template.tasksearch.events({
     templateInstance.filter.set(templateInstance.$(event.currentTarget).val())
   },
   'keydown .js-tasksearch-input': (event, templateInstance) => {
-    event.preventDefault()
     // trigger the load of wekan tasks explicitlly if user presses shift key
     if (event.shiftKey) {
       if (FlowRouter.getParam('projectId')) {
