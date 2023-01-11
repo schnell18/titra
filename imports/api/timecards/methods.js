@@ -65,11 +65,6 @@ function insertTimeCard(projectId, task, taskId, date, hours, userId, customfiel
 }
 
 function upsertTimecard(projectId, task, taskId, date, hours, userId) {
-  if (!Tasks.findOne({ userId, name: task.replace(/(:\S*:)/g, emojify) })) {
-    Tasks.insert({ userId, lastUsed: new Date(), name: task.replace(/(:\S*:)/g, emojify), taskId: taskId })
-  } else {
-    Tasks.update({ userId, name: task.replace(/(:\S*:)/g, emojify) }, { $set: { lastUsed: new Date() } })
-  }
   if (hours === 0) {
     Timecards.remove({
       userId,
@@ -453,4 +448,4 @@ function determineCustomer(cardId) {
   return null
 }
 
-export { insertTimeCard }
+export { insertTimeCard, upsertTimecard }

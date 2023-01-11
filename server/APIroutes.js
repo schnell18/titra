@@ -1,8 +1,9 @@
 import { Match, check } from 'meteor/check'
 import { getJson } from './bodyparser'
-import { insertTimeCard } from '../imports/api/timecards/methods'
+import { insertTimeCard, upsertTimecard } from '../imports/api/timecards/methods'
 import Timecards from '../imports/api/timecards/timecards'
 import Projects from '../imports/api/projects/projects'
+import { Cards } from '../imports/api/integration/server/wekan.js'
 
 function sendResponse(res, statusCode, message, payload) {
   const response = {}
@@ -329,4 +330,46 @@ WebApp.connectHandlers.use('/timer/stop/', async (req, res, next) => {
   } else {
     sendResponse(res, 500, 'No running timer found.')
   }
+})
+
+// TODO: remove this temporary workaround
+WebApp.connectHandlers.use('/timecard/fix/', async (req, res, _) => {
+  const meteorUser = checkAuthorization(req, res)
+  if (!meteorUser) {
+    return
+  }
+  const payload = {}
+  const unmatched = [];
+  // find all timecard without cardId
+  Timecards.find({cardId: {$exists: false}}).forEach(t => {
+    let boardId = null
+
+    const project = Projects.findOne({ _id: t.projectId })
+    if (project?.wekanurl) {
+      boardId = project?.wekanurl?.match(/boards\/(.*)\/export\?/)[1]
+    }
+    if (boardId) {
+      const card = Cards.findOne({title: t.task, boardId: boardId})
+      if (card) {
+        upsertTimecard(t.projectId, t.task, card._id, t.date, t.hours, t.userId)
+      }
+      else {
+        unmatched.push({
+          id: t._id,
+          task: t.task
+        })
+      }
+    }
+    else {
+      unmatched.push({
+        id: t._id,
+        task: t.task
+      })
+    }
+  });
+
+  if (unmatched.length > 0) {
+    payload.unmatches = unmatched
+  }
+  sendResponse(res, 200, 'Data fixed', payload)
 })
