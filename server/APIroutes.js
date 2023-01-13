@@ -24,9 +24,11 @@ function sendResponse(res, statusCode, message, payload) {
 }
 function checkAuthorization(req, res) {
   const authHeader = req.headers.authorization
+  console.log("authHeader => ".concat(authHeader));
   if (authHeader) {
     const meteorUser = Meteor.users.findOne({ 'profile.APItoken': authHeader.split(' ')[1] })
-    if (authHeader && authHeader.split(' ')[1] && meteorUser) {
+    console.log("meteorUser => ".concat(meteorUser));
+    if (meteorUser) {
       return meteorUser
     }
   }
